@@ -48,9 +48,10 @@ class State(TypedDict):
 def retrieve(state: State):
 
     retrieved_docs = vector_store.similarity_search(state['question'])
-    if retrieved_docs :
-        print('Retrieved \n')
-    return {"context": retrieved_docs}
+    # if retrieved_docs :
+        # print('Retrieved \n')
+    return {"context": retrieved_docs if retrieved_docs else [] }
+
 
 def browse_web_articles(state: State):
 
@@ -61,7 +62,7 @@ def browse_web_articles(state: State):
     search_list=[]
     search_results = search_tool.invoke(state['question'])
     if search_results:
-        print('Web searched \n')
+        # print('Web searched \n')
         for i in range(len(search_results['results'])) :
             search_list.append(search_results['results'][i]['content'])
 
@@ -73,9 +74,10 @@ def generate(state: State):
         {"question": state["question"],
          "context": docs_content ,
          "browsing_context": state["browsing_context"] })
-    print('In generate \n')
+    # print('In generate \n')
     response = llm.invoke(messages)
     return {"answer": response.content}
+
 
 graph_builder = StateGraph(State)
 graph_builder.add_node("retrieve", retrieve)

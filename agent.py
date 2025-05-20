@@ -1,65 +1,77 @@
-# from langchain_community.tools import BraveSearch
-# from langchain_anthropic import ChatAnthropic
-# from langgraph.prebuilt import create_react_agent
-# from langchain.chat_models import init_chat_model
-# from langchain_openai import OpenAI
-# from langchain_core.messages import HumanMessage
-# import os 
-# from langchain_openai import OpenAI
-
-
-# os.environ["OPENAI_API_KEY"]="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"
-# llm = OpenAI()
-# print(llm.invoke("Hello how are you?"))
-# api_key = "BSAjg36PROzydteRRAfkVDn3b9y8OnY"
-
-# search_tool = BraveSearch.from_api_key(api_key=api_key, search_kwargs={"count": 3})
-# search_results= search_tool.invoke("what is the weather in SF")
-
-# print(search_results)
-
-
-# model = init_chat_model("gpt-4", model_provider="openai")
-
 
 import os 
-import getpass
-import time
-from langchain_community.tools import BraveSearch
-from langchain_core.prompts import ChatPromptTemplate
+from dotenv import load_dotenv
 from langchain_ollama import OllamaLLM
-from langgraph.prebuilt import create_react_agent
-from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain.chat_models import init_chat_model
-from openai import OpenAI
-from langchain_core.rate_limiters import InMemoryRateLimiter
-from langchain_core.output_parsers import StrOutputParser
+from langchain_community.tools import BraveSearch
+from langchain_core.prompts import  ChatPromptTemplate 
+from langchain_core.tools import tool 
+from langchain.schema.messages import HumanMessage, SystemMessage
+from langchain.agents import create_openai_functions_agent,create_react_agent,create_structured_chat_agent,  AgentExecutor
+import requests
+from bs4 import BeautifulSoup
+from langchain_community.chat_models import ChatOpenAI
+
+load_dotenv() 
+Ollama_BASE_URL = os.getenv('Ollama_BASE_URL')
+BRAVE_API_KEY = os.getenv('BRAVE_API_KEY') 
 
 
-api_key = "BSAjg36PROzydteRRAfkVDn3b9y8OnY"
-# os.environ["TAVILY_API_KEY"]="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"
-# os.environ["OPENAI_API_KEY"]="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"
+@tool
+def search_tool(query: str) -> str:
+    """Search the web using Brave Search."""
+    search_tool = BraveSearch.from_api_key(api_key=BRAVE_API_KEY, search_kwargs={"count": 3})
+    search_results = search_tool.invoke(query)
+    return search_results
+
+tools=[search_tool]
 
 
-# model = init_chat_model("gpt-3.5-turbo", model_provider="openai").with_retry(stop_after_attempt=6)
+template = """\
+You are an assistant to help answer questions . 
+Questions : {input}
+Context:{context}
+"""
 
+prompt = ChatPromptTemplate.from_template(  template) #from_messages
 
-template = """Question: {question}
-
-Answer: Let's think step by step."""
-
-prompt = ChatPromptTemplate.from_template(template)
-search_tool = BraveSearch.from_api_key(api_key=api_key, search_kwargs={"count": 3})
-model = OllamaLLM(model="llama3.2" ,  base_url="http://localhost:11434")
+model = OllamaLLM(model="llama3.2" ,  base_url=Ollama_BASE_URL)
 
 chain = prompt | model 
 
-response = chain.invoke({"question": "What is LangChain?"})
-# search_results= search_tool.invoke("what is the weather in SF")
-
-print(response)
+for token in chain.stream({"input": "what is LangChain?"}):
+    print(token, end="", flush=True)
 
 
-#With Ollama :  bind not working ,  create_react_agent no bind-tools in Ollama
-#Wicth OpenApi : Error code: 429 - {'error_message': 'You exceeded your current quota'}
-#RAG Part 1 
+
+
+
+# system_prompt = """\
+
+# You are an assistant that has access to tools {tools} to answer questions, use them when necessary.
+# Action: the action to take, should be one of [{tool_names}]
+# You can use the following tool to answer the question:
+
+# Question: {input}
+# {agent_scratchpad}
+# """
+# agent_prompt = ChatPromptTemplate.from_template(system_prompt)
+# # agent_prompt = ChatPromptTemplate.from_messages([
+# #     ("system", "You are a helpful assistant with access to the following tools: {tool_names},  {tools} . {agent_scratchpad}"),
+# #     ("human", "{input}"),
+    
+# # ])
+# agent = create_structured_chat_agent(model, tools, agent_prompt )  
+
+# agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False) #pass error back to the agent and have it try again
+
+# print("Testing agent:")
+# result = agent_executor.invoke({'input': "What is LangChain?"})
+# print(result)
+
+
+
+
+
+
+
+
