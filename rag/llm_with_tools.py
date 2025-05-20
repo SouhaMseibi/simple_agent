@@ -46,15 +46,11 @@ class State(TypedDict):
     answer: str
 
 def retrieve(state: State):
-
     retrieved_docs = vector_store.similarity_search(state['question'])
-    # if retrieved_docs :
-        # print('Retrieved \n')
     return {"context": retrieved_docs if retrieved_docs else [] }
 
 
 def browse_web_articles(state: State):
-
     search_tool = TavilySearch(
         max_results = 3,
         topic="general"
@@ -62,7 +58,6 @@ def browse_web_articles(state: State):
     search_list=[]
     search_results = search_tool.invoke(state['question'])
     if search_results:
-        # print('Web searched \n')
         for i in range(len(search_results['results'])) :
             search_list.append(search_results['results'][i]['content'])
 
@@ -74,7 +69,6 @@ def generate(state: State):
         {"question": state["question"],
          "context": docs_content ,
          "browsing_context": state["browsing_context"] })
-    # print('In generate \n')
     response = llm.invoke(messages)
     return {"answer": response.content}
 
@@ -91,17 +85,16 @@ graph_builder.add_edge("generate", END)
 graph = graph_builder.compile()
 
 def stream_graph_updates(user_input):
-
     for event in graph.stream({"question": user_input}):
-
         if "generate" in event:
             print("Answer:", event["generate"]["answer"])
 
-while True:
 
-        user_input = input("User: ")
-        if user_input.lower() in ["quit", "exit", "q"]:
-            print("Goodbye!")
-            break
+if __name__ == '__main__':
 
-        stream_graph_updates(user_input )
+    while True:
+            user_input = input("User: ")
+            if user_input.lower() in ["quit", "exit", "q"]:
+                print("Goodbye!")
+                break
+            stream_graph_updates(user_input )
